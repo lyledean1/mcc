@@ -8,8 +8,12 @@ Instead of copy-pasting chat history or explaining what you tried, hand off your
 # You at 1am
 cd /my/project
 mcc export auth-crash-theory
+# Exports to: ~/.mcc/exports/auth-crash-theory.json.gz
 
-# Teammate at 1:02am
+# Send file via Slack/Dropbox/email to teammate
+
+# Teammate drops it in their ~/.mcc/exports/ folder
+# Then:
 cd /my/project
 mcc import auth-crash-theory
 claude
@@ -20,8 +24,10 @@ claude
 ## Install
 
 ```bash
-cargo install --path . --features gcs
+cargo install --path .
 ```
+
+For cloud storage support: `cargo install --path . --features gcs`
 
 ## Usage
 
@@ -42,22 +48,17 @@ mcc
 - All file changes and tool calls
 - Git branch and working directory context
 
-## Cloud Sharing (Optional)
+## Cloud Sharing (Advanced)
+
+Want to skip the file transfer? Set up GCS for automatic sharing:
 
 ```bash
-# Setup
 mcc config set-bucket gs://my-team-sessions
-gcloud auth application-default login
-
-# Share
-mcc export my-fix
 mcc share ~/.mcc/exports/my-fix.json.gz
-
-# Fetch
-mcc fetch gs://my-team-sessions/my-fix.json.gz
+# Teammate runs: mcc fetch gs://my-team-sessions/my-fix.json.gz
 ```
 
-See [GCS_SETUP.md](GCS_SETUP.md) for details.
+See [GCS_SETUP.md](GCS_SETUP.md) for setup. **But start with local files first - it's simpler.**
 
 ## Files
 
