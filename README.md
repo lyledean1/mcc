@@ -1,17 +1,20 @@
 # MCC - Multi-Claude Code
 
-Share Claude Code sessions between developers. Export your debugging session, send it to a teammate, they resume with full context.
+**It's 1am. Production is down. You've been debugging with Claude for 2 hours and found something. Your teammate has a different theory.**
+
+Instead of copy-pasting chat history or explaining what you tried, hand off your entire Claude Code session. They see every message, every file change, every debugging step. They pick up exactly where you left off.
 
 ```bash
-# You
+# You at 1am
 cd /my/project
-mcc export fixing-auth-bug
+mcc export auth-crash-theory
 
-# Teammate
+# Teammate at 1:02am
 cd /my/project
-mcc import fixing-auth-bug
+mcc import auth-crash-theory
 claude
 /resume
+# Sees your full 2-hour debugging session, continues from there
 ```
 
 ## Install
