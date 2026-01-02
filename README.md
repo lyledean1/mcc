@@ -1,24 +1,32 @@
 # MCC - Multi-Claude Code
 
-**It's 1am. Production is down. You've been debugging with Claude for 2 hours and found something. Your teammate has a different theory.**
+**Share Claude Code sessions with your team.**
+
+It's 1am. Production is down. You've been debugging with Claude for 2 hours and found something crucial. Your teammate has a different theory and wants to help.
 
 Instead of copy-pasting chat history or explaining what you tried, hand off your entire Claude Code session. They see every message, every file change, every debugging step. They pick up exactly where you left off.
+
+## How It Works
 
 ```bash
 # You at 1am
 cd /my/project
 mcc export
-# Creates: ./mcc-export.json.gz
+# ✓ Session exported to ./mcc-export.json.gz
 
-# Send mcc-export.json.gz via Slack to teammate
+# Send mcc-export.json.gz to teammate via Slack/email
 
-# Teammate at 1:02am (drops file in their project folder)
+# Teammate at 1:02am (saves file in their project folder)
 cd /my/project
 mcc import
+# ✓ Session imported!
+
 claude
 /resume
-# Sees your full 2-hour debugging session, continues from there
+# They now see your full 2-hour debugging session and continue from there
 ```
+
+**That's it.** Export creates a file. Import loads it. No setup, no config, no cloud accounts.
 
 ## Install
 
@@ -26,46 +34,83 @@ claude
 cargo install --path .
 ```
 
-For cloud storage support: `cargo install --path . --features gcs`
-
-## Usage
+## Commands
 
 ```bash
-# Export current session (creates ./mcc-export.json.gz)
-mcc export
-
-# Import a session (reads ./mcc-export.json.gz)
-mcc import
+mcc export    # Export current session → ./mcc-export.json.gz
+mcc import    # Import session from ./mcc-export.json.gz
+mcc preview <file>  # Preview session details without importing
+mcc help      # Show help
 ```
 
 ## What Gets Shared
 
-- Full conversation history
-- All file changes and tool calls
-- Git branch and working directory context
+Your exported session includes:
 
-## Cloud Sharing (Advanced)
+- **Full conversation history** - Every message, question, and response
+- **All file changes** - Every edit Claude made
+- **Complete context** - Git branch, working directory, tool calls
+- **Session metadata** - Who exported, when, from which machine
 
-Want to skip the file transfer? Set up GCS for automatic sharing:
+The session file is compressed and typically small (a few hundred KB for most sessions).
 
+## How to Share
+
+### 1. Via Slack/Chat
 ```bash
-mcc config set-bucket gs://my-team-sessions
-mcc share ~/.mcc/exports/my-fix.json.gz
-# Teammate runs: mcc fetch gs://my-team-sessions/my-fix.json.gz
+mcc export
+# Attach ./mcc-export.json.gz to Slack message
 ```
 
-See [GCS_SETUP.md](GCS_SETUP.md) for setup. **But start with local files first - it's simpler.**
+### 2. Via Email
+```bash
+mcc export
+# Attach ./mcc-export.json.gz to email
+```
 
-## Files
+### 3. Via Shared Drive
+```bash
+mcc export
+cp mcc-export.json.gz /path/to/shared/drive/
+```
 
-- Export creates: `./mcc-export.json.gz` (in current directory)
-- Sessions stored in: `~/.claude/projects/`
+Your teammate just needs to save the file in their project directory and run `mcc import`.
+
+## Preview Before Importing
+
+Want to see what's in a session before importing?
+
+```bash
+mcc preview mcc-export.json.gz
+# Session Preview:
+#   Version: 1.0.0
+#   Exported by: alice@laptop
+#   Exported at: 2026-01-02T12:34:56Z
+#   Project: /Users/alice/projects/myapp
+#   Summary: Fix production database timeout issue
+#   Messages: 47
+#   Git branch: hotfix/db-timeout
+```
+
+## Requirements
+
+- Both you and your teammate need Claude Code installed
+- Both should have the project cloned locally
+- Project paths can differ (MCC handles this automatically)
 
 ## Tips
 
-- Export at debugging milestones
-- Project structure should match between teammates
-- Session includes git branch context
+- **Export at milestones** - After fixing a bug, before switching tasks
+- **Name your exports** - Rename `mcc-export.json.gz` to `db-fix.json.gz` before sharing
+- **Project structure** - Should generally match between teammates (same repo)
+- **Git branches** - Session includes branch info, but you can resume on any branch
+
+## Technical Details
+
+- **Export location**: `./mcc-export.json.gz` (current directory)
+- **Session storage**: `~/.claude/projects/` (Claude Code's session directory)
+- **Format**: Compressed JSON (gzip)
+- **Session rewriting**: Import automatically rewrites paths to match teammate's environment
 
 ## License
 
