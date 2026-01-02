@@ -1,8 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::path::Path;
 
 #[cfg(feature = "gcs")]
-use std::process::Command;
+use {anyhow::Context, std::process::Command};
 
 /// Configuration for cloud storage
 pub struct CloudConfig {
@@ -112,11 +112,13 @@ pub async fn download_session(gcs_path: &str, output_path: &Path) -> Result<()> 
 }
 
 #[cfg(not(feature = "gcs"))]
+#[allow(dead_code)]
 pub async fn upload_session(_file_path: &Path, _bucket: &str) -> Result<String> {
     anyhow::bail!("GCS support not enabled. Rebuild with --features gcs")
 }
 
 #[cfg(not(feature = "gcs"))]
+#[allow(dead_code)]
 pub async fn download_session(_gcs_path: &str, _output_path: &Path) -> Result<()> {
     anyhow::bail!("GCS support not enabled. Rebuild with --features gcs")
 }

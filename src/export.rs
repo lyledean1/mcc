@@ -68,6 +68,7 @@ impl ExportedSession {
 }
 
 /// Export a session to an .mcc file
+#[allow(dead_code)]
 pub fn export_session(session: &Session, output_dir: Option<&Path>) -> Result<PathBuf> {
     let exported = ExportedSession::from_session(session)?;
 

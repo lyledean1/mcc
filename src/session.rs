@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SessionMessage {
@@ -15,6 +15,7 @@ pub struct SessionMessage {
 pub struct Session {
     pub id: String,
     pub project_path: String,
+    #[allow(dead_code)]
     pub file_path: PathBuf,
     pub messages: Vec<SessionMessage>,
     pub last_modified: u64,
@@ -57,16 +58,15 @@ impl Session {
             }
 
             // Try to get first user message as summary
-            if msg.msg_type == "user" {
-                if let Some(message) = msg.data.get("message") {
-                    if let Some(content) = message.get("content").and_then(|v| v.as_str()) {
-                        summary = content.chars().take(60).collect();
-                        if content.len() > 60 {
-                            summary.push_str("...");
-                        }
-                        break;
-                    }
+            if msg.msg_type == "user"
+                && let Some(message) = msg.data.get("message")
+                && let Some(content) = message.get("content").and_then(|v| v.as_str())
+            {
+                summary = content.chars().take(60).collect();
+                if content.len() > 60 {
+                    summary.push_str("...");
                 }
+                break;
             }
         }
 
@@ -82,11 +82,13 @@ impl Session {
     }
 
     /// Get the number of messages in this session
+    #[allow(dead_code)]
     pub fn message_count(&self) -> usize {
         self.messages.len()
     }
 
     /// Get formatted time ago
+    #[allow(dead_code)]
     pub fn time_ago(&self) -> String {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -138,10 +140,10 @@ pub fn find_all_sessions() -> Result<Vec<Session>> {
             let session_entry = session_entry?;
             let session_path = session_entry.path();
 
-            if session_path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
-                if let Ok(session) = Session::load(session_path, project_name.clone()) {
-                    sessions.push(session);
-                }
+            if session_path.extension().and_then(|s| s.to_str()) == Some("jsonl")
+                && let Ok(session) = Session::load(session_path, project_name.clone())
+            {
+                sessions.push(session);
             }
         }
     }

@@ -50,12 +50,11 @@ pub fn import_session(mcc_file: &Path, target_project_path: Option<String>) -> R
         let mut msg = message.clone();
 
         // Rewrite the cwd field in the data if it exists
-        if let Some(cwd) = msg.data.get("cwd").and_then(|v| v.as_str()) {
-            if cwd == original_path {
-                if let Some(obj) = msg.data.as_object_mut() {
-                    obj.insert("cwd".to_string(), serde_json::json!(project_path));
-                }
-            }
+        if let Some(cwd) = msg.data.get("cwd").and_then(|v| v.as_str())
+            && cwd == original_path
+            && let Some(obj) = msg.data.as_object_mut()
+        {
+            obj.insert("cwd".to_string(), serde_json::json!(project_path));
         }
 
         output.push_str(&serde_json::to_string(&msg)?);
@@ -79,10 +78,10 @@ fn update_claude_config(project_path: &str, session_id: &str) -> Result<()> {
     let mut config: serde_json::Value = serde_json::from_str(&content)?;
 
     // Set lastSessionId for this project
-    if let Some(projects) = config.get_mut("projects") {
-        if let Some(project) = projects.get_mut(project_path) {
-            project["lastSessionId"] = serde_json::json!(session_id);
-        }
+    if let Some(projects) = config.get_mut("projects")
+        && let Some(project) = projects.get_mut(project_path)
+    {
+        project["lastSessionId"] = serde_json::json!(session_id);
     }
 
     fs::write(&config_path, serde_json::to_string_pretty(&config)?)?;
