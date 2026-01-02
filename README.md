@@ -1,4 +1,4 @@
-# MCC - Multi-Claude Code
+# MCC - Multiplayer Claude Code
 
 **Share Claude Code sessions with your team.**
 
