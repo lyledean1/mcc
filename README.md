@@ -7,15 +7,14 @@ Instead of copy-pasting chat history or explaining what you tried, hand off your
 ```bash
 # You at 1am
 cd /my/project
-mcc export auth-crash-theory
-# Exports to: ~/.mcc/exports/auth-crash-theory.json.gz
+mcc export
+# Creates: ./mcc-export.json.gz
 
-# Send file via Slack/Dropbox/email to teammate
+# Send mcc-export.json.gz via Slack to teammate
 
-# Teammate drops it in their ~/.mcc/exports/ folder
-# Then:
+# Teammate at 1:02am (drops file in their project folder)
 cd /my/project
-mcc import auth-crash-theory
+mcc import
 claude
 /resume
 # Sees your full 2-hour debugging session, continues from there
@@ -32,14 +31,11 @@ For cloud storage support: `cargo install --path . --features gcs`
 ## Usage
 
 ```bash
-# Export current session
-mcc export my-session-name
+# Export current session (creates ./mcc-export.json.gz)
+mcc export
 
-# Import a session
-mcc import my-session-name
-
-# Browse all sessions (TUI)
-mcc
+# Import a session (reads ./mcc-export.json.gz)
+mcc import
 ```
 
 ## What Gets Shared
@@ -62,8 +58,8 @@ See [GCS_SETUP.md](GCS_SETUP.md) for setup. **But start with local files first -
 
 ## Files
 
-- Exports: `~/.mcc/exports/`
-- Sessions: `~/.claude/projects/`
+- Export creates: `./mcc-export.json.gz` (in current directory)
+- Sessions stored in: `~/.claude/projects/`
 
 ## Tips
 

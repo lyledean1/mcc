@@ -81,10 +81,7 @@ fn main() -> Result<()> {
     if args.len() > 1 {
         match args[1].as_str() {
             "export" => {
-                // mcc export [name]
-                let custom_name = args.get(2).map(|s| s.as_str());
-
-                // Find the session for the current directory
+                // mcc export - always exports to ./mcc-export.json.gz
                 let current_dir = std::env::current_dir()?;
                 let current_path = current_dir.to_str().context("Invalid current directory path")?;
 
@@ -95,45 +92,17 @@ fn main() -> Result<()> {
 
                 match current_session {
                     Some(session) => {
-                        let home = std::env::var("HOME")?;
-                        let export_dir = PathBuf::from(home).join(".mcc/exports");
-                        std::fs::create_dir_all(&export_dir)?;
-
-                        // Generate filename with custom name or summary
-                        let timestamp = chrono::Utc::now().format("%Y%m%d-%H%M%S");
-                        let name = custom_name.unwrap_or(&session.summary);
-                        let safe_name = name
-                            .chars()
-                            .filter(|c| c.is_alphanumeric() || *c == ' ' || *c == '-')
-                            .take(30)
-                            .collect::<String>()
-                            .replace(' ', "-")
-                            .to_lowercase();
-
-                        let filename = if let Some(_) = custom_name {
-                            format!("{}.json.gz", safe_name)
-                        } else {
-                            format!("{}-{}.json.gz", timestamp, safe_name)
-                        };
-
-                        let output_path = export_dir.join(&filename);
+                        let output_path = current_dir.join("mcc-export.json.gz");
 
                         // Export
                         let exported = export::ExportedSession::from_session(session)?;
                         exported.export_to_file(&output_path)?;
 
-                        println!("✓ Session exported!");
-                        println!("  Name: {}", filename.trim_end_matches(".json.gz"));
-                        println!("  File: {}", output_path.display());
-                        println!("\nShare with your team:");
-                        println!("  mcc import {}", filename.trim_end_matches(".json.gz"));
-                        #[cfg(feature = "gcs")]
-                        {
-                            let config = cloud::CloudConfig::load()?;
-                            if config.enabled {
-                                println!("  mcc share {}", output_path.display());
-                            }
-                        }
+                        println!("✓ Session exported to ./mcc-export.json.gz");
+                        println!("\nShare with teammate:");
+                        println!("  1. Send mcc-export.json.gz via Slack/email");
+                        println!("  2. They drop it in their project folder");
+                        println!("  3. They run: mcc import");
                     }
                     None => {
                         eprintln!("✗ No Claude Code session found for current directory");
@@ -145,62 +114,22 @@ fn main() -> Result<()> {
                 return Ok(());
             }
             "import" => {
-                if args.len() < 3 {
-                    eprintln!("Usage: mcc import <name-or-file> [target-project-path]");
+                // mcc import - looks for ./mcc-export.json.gz
+                let current_dir = std::env::current_dir()?;
+                let file_path = current_dir.join("mcc-export.json.gz");
+
+                if !file_path.exists() {
+                    eprintln!("✗ File not found: ./mcc-export.json.gz");
+                    eprintln!("\nMake sure you have mcc-export.json.gz in the current directory.");
                     std::process::exit(1);
                 }
 
-                // Check if it's a name or a full path
-                let input = &args[2];
-                let file_path = if input.contains('/') || input.ends_with(".json.gz") {
-                    // It's a path
-                    PathBuf::from(input)
-                } else {
-                    // It's a name - look in ~/.mcc/exports
-                    let home = std::env::var("HOME")?;
-                    let exports_dir = PathBuf::from(home).join(".mcc/exports");
-
-                    // Try with .json.gz extension
-                    let with_ext = format!("{}.json.gz", input);
-                    let candidate = exports_dir.join(&with_ext);
-
-                    if candidate.exists() {
-                        candidate
-                    } else {
-                        // Maybe they included the extension
-                        let candidate = exports_dir.join(input);
-                        if candidate.exists() {
-                            candidate
-                        } else {
-                            eprintln!("✗ Session not found: {}", input);
-                            eprintln!("  Looked in: {}", exports_dir.display());
-                            eprintln!("\nAvailable sessions:");
-                            if let Ok(entries) = std::fs::read_dir(&exports_dir) {
-                                for entry in entries.flatten() {
-                                    if let Some(name) = entry.file_name().to_str() {
-                                        if name.ends_with(".json.gz") {
-                                            println!("  - {}", name.trim_end_matches(".json.gz"));
-                                        }
-                                    }
-                                }
-                            }
-                            std::process::exit(1);
-                        }
-                    }
-                };
-
-                let target_path = args.get(3).map(|s| s.to_string()).or_else(|| {
-                    // Default to current directory
-                    std::env::current_dir()
-                        .ok()
-                        .and_then(|p| p.to_str().map(|s| s.to_string()))
-                });
+                let target_path = current_dir.to_str().map(|s| s.to_string());
 
                 match import::import_session(&file_path, target_path) {
                     Ok(session_file) => {
-                        println!("✓ Session imported successfully!");
-                        println!("  File: {}", session_file.display());
-                        println!("\nYou can now open Claude Code and use /resume to load this session.");
+                        println!("✓ Session imported!");
+                        println!("\nOpen Claude Code and run /resume to continue the session.");
                     }
                     Err(e) => {
                         eprintln!("✗ Import failed: {}", e);
@@ -336,22 +265,20 @@ fn main() -> Result<()> {
             }
             "help" | "-h" | "--help" => {
                 println!("MCC - Multi-Claude Code");
-                println!("\nQuick Start:");
-                println!("  mcc export [name]                      Export current directory's session");
-                println!("  mcc import <name> [path]               Import a session (defaults to current dir)");
+                println!("\nUsage:");
+                println!("  mcc export        Export session to ./mcc-export.json.gz");
+                println!("  mcc import        Import session from ./mcc-export.json.gz");
+                println!("\nWorkflow:");
+                println!("  1. cd /my/project && mcc export");
+                println!("  2. Send mcc-export.json.gz to teammate via Slack");
+                println!("  3. Teammate drops file in their project folder");
+                println!("  4. cd /my/project && mcc import");
+                println!("  5. claude -> /resume");
                 println!("\nAdvanced:");
-                println!("  mcc                                    Launch TUI browser");
-                println!("  mcc preview <file.json.gz>             Preview session details");
-                println!("\nCloud Storage (requires --features gcs):");
-                println!("  mcc config set-bucket <gs://bucket>    Configure GCS bucket");
-                println!("  mcc share <file.json.gz>               Upload to GCS");
-                println!("  mcc fetch <gs://bucket/file> [path]    Download and import from GCS");
-                println!("\nExamples:");
-                println!("  cd /my/project");
-                println!("  mcc export auth-bug-fix                Export with custom name");
-                println!("  mcc import auth-bug-fix                Import to current directory");
+                println!("  mcc                       Browse all sessions (TUI)");
+                println!("  mcc preview <file>        Preview session details");
                 println!("\nOther:");
-                println!("  mcc help                               Show this help");
+                println!("  mcc help                  Show this help");
                 return Ok(());
             }
             _ => {
