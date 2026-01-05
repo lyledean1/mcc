@@ -30,27 +30,13 @@ claude
 
 ## Install
 
-### From Pre-built Binaries (Recommended)
-
-Download the latest release for your platform from [GitHub Releases](https://github.com/lyledean1/mcc/releases):
+### Quick Install (Recommended)
 
 ```bash
-# Linux (x86_64)
-curl -L https://github.com/lyledean1/mcc/releases/latest/download/mcc-linux-amd64.tar.gz | tar xz
-sudo mv mcc /usr/local/bin/
-
-# Linux (ARM64)
-curl -L https://github.com/lyledean1/mcc/releases/latest/download/mcc-linux-arm64.tar.gz | tar xz
-sudo mv mcc /usr/local/bin/
-
-# macOS (Intel)
-curl -L https://github.com/lyledean1/mcc/releases/latest/download/mcc-macos-amd64.tar.gz | tar xz
-sudo mv mcc /usr/local/bin/
-
-# macOS (Apple Silicon)
-curl -L https://github.com/lyledean1/mcc/releases/latest/download/mcc-macos-arm64.tar.gz | tar xz
-sudo mv mcc /usr/local/bin/
+curl -fsSL https://raw.githubusercontent.com/lyledean1/mcc/main/install.sh | bash
 ```
+
+This automatically detects your platform and installs the latest release.
 
 ### From Source
 
