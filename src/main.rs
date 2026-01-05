@@ -32,14 +32,114 @@ fn cmd_export() -> Result<()> {
     let current_path = current_dir.to_str().context("Invalid current directory path")?;
 
     let sessions = find_all_sessions()?;
-    let current_session = sessions.iter()
-        .filter(|s| s.project_path == current_path)
-        .max_by_key(|s| s.last_modified);
+
+    // Try to find a matching session with smart path matching
+    let current_session = find_matching_session(&sessions, current_path);
 
     match current_session {
         Some(session) => export_session_success(session, &current_dir),
         None => export_session_not_found(current_path),
     }
+}
+
+/// Find a matching session using smart path matching:
+/// 1. Exact path match (highest priority)
+/// 2. Same directory basename + git repo match
+/// 3. Same directory basename (fallback)
+fn find_matching_session<'a>(sessions: &'a [session::Session], current_path: &str) -> Option<&'a session::Session> {
+    // Try exact match first
+    let exact_match = sessions.iter()
+        .filter(|s| s.project_path == current_path)
+        .max_by_key(|s| s.last_modified);
+
+    if exact_match.is_some() {
+        return exact_match;
+    }
+
+    // Get current directory basename
+    let current_basename = std::path::Path::new(current_path)
+        .file_name()
+        .and_then(|s| s.to_str());
+
+    if current_basename.is_none() {
+        return None;
+    }
+    let current_basename = current_basename.unwrap();
+
+    // Get current git remote URL for better matching
+    let current_git_remote = get_git_remote_url().ok();
+
+    // Filter sessions by matching basename
+    let basename_matches: Vec<&session::Session> = sessions.iter()
+        .filter(|s| {
+            std::path::Path::new(&s.project_path)
+                .file_name()
+                .and_then(|s| s.to_str()) == Some(current_basename)
+        })
+        .collect();
+
+    if basename_matches.is_empty() {
+        return None;
+    }
+
+    // If we have git info, try to match by git remote URL
+    if let Some(ref current_remote) = current_git_remote {
+        let git_match = basename_matches.iter()
+            .filter(|s| {
+                // Try to get git remote from session's original path
+                if let Ok(session_remote) = get_git_remote_url_for_path(&s.project_path) {
+                    normalize_git_url(&session_remote) == normalize_git_url(current_remote)
+                } else {
+                    false
+                }
+            })
+            .max_by_key(|s| s.last_modified);
+
+        if git_match.is_some() {
+            return git_match.copied();
+        }
+    }
+
+    // Fallback: return most recent session with matching basename
+    basename_matches.iter()
+        .max_by_key(|s| s.last_modified)
+        .copied()
+}
+
+/// Get the git remote URL for the current directory
+fn get_git_remote_url() -> Result<String> {
+    let output = std::process::Command::new("git")
+        .args(["config", "--get", "remote.origin.url"])
+        .output()?;
+
+    if output.status.success() {
+        Ok(String::from_utf8(output.stdout)?.trim().to_string())
+    } else {
+        anyhow::bail!("No git remote found")
+    }
+}
+
+/// Get the git remote URL for a specific path
+fn get_git_remote_url_for_path(path: &str) -> Result<String> {
+    let output = std::process::Command::new("git")
+        .args(["-C", path, "config", "--get", "remote.origin.url"])
+        .output()?;
+
+    if output.status.success() {
+        Ok(String::from_utf8(output.stdout)?.trim().to_string())
+    } else {
+        anyhow::bail!("No git remote found")
+    }
+}
+
+/// Normalize git URL for comparison (handles https vs ssh formats)
+fn normalize_git_url(url: &str) -> String {
+    url.trim()
+        .trim_end_matches(".git")
+        .replace("git@github.com:", "github.com/")
+        .replace("https://github.com/", "github.com/")
+        .replace("http://github.com/", "github.com/")
+        .to_lowercase()
 }
 
 fn export_session_success(session: &session::Session, current_dir: &std::path::Path) -> Result<()> {
