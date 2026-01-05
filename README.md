@@ -30,6 +30,30 @@ claude
 
 ## Install
 
+### From Pre-built Binaries (Recommended)
+
+Download the latest release for your platform from [GitHub Releases](https://github.com/lyledean1/mcc/releases):
+
+```bash
+# Linux (x86_64)
+curl -L https://github.com/lyledean1/mcc/releases/latest/download/mcc-linux-amd64.tar.gz | tar xz
+sudo mv mcc /usr/local/bin/
+
+# Linux (ARM64)
+curl -L https://github.com/lyledean1/mcc/releases/latest/download/mcc-linux-arm64.tar.gz | tar xz
+sudo mv mcc /usr/local/bin/
+
+# macOS (Intel)
+curl -L https://github.com/lyledean1/mcc/releases/latest/download/mcc-macos-amd64.tar.gz | tar xz
+sudo mv mcc /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -L https://github.com/lyledean1/mcc/releases/latest/download/mcc-macos-arm64.tar.gz | tar xz
+sudo mv mcc /usr/local/bin/
+```
+
+### From Source
+
 ```bash
 cargo install --path .
 ```

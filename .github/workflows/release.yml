@@ -48,14 +48,28 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
 
+      - name: Configure linker for ARM64
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          mkdir -p .cargo
+          cat >> .cargo/config.toml << EOF
+          [target.aarch64-unknown-linux-gnu]
+          linker = "aarch64-linux-gnu-gcc"
+          EOF
+
       - name: Build binary
         run: |
           cargo build --release --target ${{ matrix.target }}
 
-      - name: Strip binary (Linux)
-        if: runner.os == 'Linux'
+      - name: Strip binary (Linux x86_64)
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+
+      - name: Strip binary (Linux ARM64)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          aarch64-linux-gnu-strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
 
       - name: Strip binary (macOS)
         if: runner.os == 'macOS'
