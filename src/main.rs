@@ -22,6 +22,8 @@ fn main() -> Result<()> {
         "config" => cmd_config(&args),
         "share" => cmd_share(&args),
         "fetch" => cmd_fetch(&args),
+        "sync" => cmd_sync(),
+        "restore" => cmd_restore(),
         "help" | "-h" | "--help" => cmd_help(),
         _ => cmd_unknown(&args[1]),
     }
@@ -337,6 +339,74 @@ fn gcs_not_enabled() -> Result<()> {
     std::process::exit(1);
 }
 
+fn cmd_sync() -> Result<()> {
+    #[cfg(feature = "gcs")]
+    {
+        let config = cloud::CloudConfig::load()?;
+
+        if !config.enabled {
+            eprintln!("✗ GCS not configured. Run: mcc config set-bucket gs://your-bucket");
+            std::process::exit(1);
+        }
+
+        println!("Syncing all sessions to GCS...");
+
+        let runtime = tokio::runtime::Runtime::new()?;
+        match runtime.block_on(cloud::sync_sessions(&config.bucket)) {
+            Ok(uploaded_files) => {
+                println!("✓ Synced {} sessions to {}", uploaded_files.len(), config.bucket);
+                println!("\nYour sessions are now backed up to GCS.");
+                println!("Run 'mcc restore' to restore them on another machine.");
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("✗ Sync failed: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+    #[cfg(not(feature = "gcs"))]
+    {
+        gcs_not_enabled()
+    }
+}
+
+fn cmd_restore() -> Result<()> {
+    #[cfg(feature = "gcs")]
+    {
+        let config = cloud::CloudConfig::load()?;
+
+        if !config.enabled {
+            eprintln!("✗ GCS not configured. Run: mcc config set-bucket gs://your-bucket");
+            std::process::exit(1);
+        }
+
+        println!("Restoring sessions from GCS...");
+
+        let runtime = tokio::runtime::Runtime::new()?;
+        match runtime.block_on(cloud::restore_sessions(&config.bucket)) {
+            Ok(restored_files) => {
+                if restored_files.is_empty() {
+                    println!("✓ No sessions found in GCS bucket");
+                } else {
+                    println!("✓ Restored {} sessions from {}", restored_files.len(), config.bucket);
+                    println!("\nYour sessions are now available locally.");
+                    println!("Run 'claude' and use /resume to continue a session.");
+                }
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("✗ Restore failed: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+    #[cfg(not(feature = "gcs"))]
+    {
+        gcs_not_enabled()
+    }
+}
+
 fn cmd_help() -> Result<()> {
     show_help();
     Ok(())
@@ -359,6 +429,10 @@ fn show_help() {
     println!("  3. Teammate drops file in their project folder");
     println!("  4. cd /my/project && mcc import");
     println!("  5. claude -> /resume");
+    println!("\nCloud Backup (requires GCS):");
+    println!("  mcc config set-bucket <gs://bucket>  Configure GCS bucket");
+    println!("  mcc sync                             Backup all sessions to GCS");
+    println!("  mcc restore                          Restore all sessions from GCS");
     println!("\nAdvanced:");
     println!("  mcc preview <file>        Preview session details");
     println!("\nOther:");

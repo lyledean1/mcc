@@ -47,11 +47,31 @@ cargo install --path .
 ## Commands
 
 ```bash
-mcc export    # Export current session → ./mcc-export.json.gz
-mcc import    # Import session from ./mcc-export.json.gz
-mcc preview <file>  # Preview session details without importing
-mcc help      # Show help
+mcc export              # Export current session → ./mcc-export.json.gz
+mcc import              # Import session from ./mcc-export.json.gz
+mcc preview <file>      # Preview session details without importing
+mcc help                # Show help
 ```
+
+### Cloud Backup (Optional)
+
+Back up all your sessions to Google Cloud Storage:
+
+```bash
+# One-time setup
+mcc config set-bucket gs://your-bucket-name
+
+# Backup all sessions
+mcc sync
+
+# Restore on another machine
+mcc restore
+```
+
+This is perfect for:
+- Syncing sessions across multiple laptops
+- Backing up your Claude Code history
+- Disaster recovery
 
 ## What Gets Shared
 
