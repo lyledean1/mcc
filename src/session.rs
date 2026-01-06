@@ -25,7 +25,7 @@ pub struct Session {
 
 impl Session {
     /// Load a session from a .jsonl file
-    pub fn load(file_path: PathBuf, project_path: String) -> Result<Self> {
+    pub fn load(file_path: PathBuf, _project_path: String) -> Result<Self> {
         let content = fs::read_to_string(&file_path)
             .context("Failed to read session file")?;
 
@@ -48,27 +48,43 @@ impl Session {
             .duration_since(std::time::UNIX_EPOCH)?
             .as_secs();
 
-        // Extract git branch and summary from messages
+        // Extract project_path, git branch, and summary from messages
+        let mut actual_project_path = None;
         let mut git_branch = None;
         let mut summary = String::from("No messages");
 
         for msg in &messages {
-            if let Some(branch) = msg.data.get("gitBranch").and_then(|v| v.as_str()) {
-                git_branch = Some(branch.to_string());
+            // Extract cwd (project path) from user messages
+            if msg.msg_type == "user" {
+                if let Some(cwd) = msg.data.get("cwd").and_then(|v| v.as_str()) {
+                    if actual_project_path.is_none() {
+                        actual_project_path = Some(cwd.to_string());
+                    }
+                }
+
+                // Try to get first user message as summary
+                if summary == "No messages" {
+                    if let Some(message) = msg.data.get("message") {
+                        if let Some(content) = message.get("content").and_then(|v| v.as_str()) {
+                            summary = content.chars().take(60).collect();
+                            if content.len() > 60 {
+                                summary.push_str("...");
+                            }
+                        }
+                    }
+                }
             }
 
-            // Try to get first user message as summary
-            if msg.msg_type == "user"
-                && let Some(message) = msg.data.get("message")
-                && let Some(content) = message.get("content").and_then(|v| v.as_str())
-            {
-                summary = content.chars().take(60).collect();
-                if content.len() > 60 {
-                    summary.push_str("...");
+            // Extract git branch
+            if git_branch.is_none() {
+                if let Some(branch) = msg.data.get("gitBranch").and_then(|v| v.as_str()) {
+                    git_branch = Some(branch.to_string());
                 }
-                break;
             }
         }
+
+        // Use actual path from messages, or fall back to the directory-based path
+        let project_path = actual_project_path.unwrap_or(_project_path);
 
         Ok(Session {
             id,
